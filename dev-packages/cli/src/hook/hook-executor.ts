@@ -18,13 +18,13 @@ export class HookExecutor {
     }
 
     async executeInitHooks(projectPath?: string) {
-        const context = await this.buildContext(projectPath)
+        const context = await this.buildContext(projectPath);
         const modules = context.pkg.initHookModules;
         await this.doExecuteHooks(modules, context, 'initHooks');
     }
 
     async executeDeployHooks(projectPath?: string) {
-        const context = await this.buildContext(projectPath)
+        const context = await this.buildContext(projectPath);
         const modules = context.pkg.deployHookModules;
         if (modules.size === 0) {
             console.log(chalk.yellow('Please provide the deploy hook first.'));
@@ -46,9 +46,12 @@ export class HookExecutor {
 
         for (const m of modules.entries()) {
             const [moduleName, modulePath] = m;
-            const config = context.pkg.backendConfig[moduleName];
-            if (!config || config[hookName] !== false) {
-                await require(modulePath).default(context);
+            const name = moduleName.split('/').pop();
+            if (name) {
+                const config = context.pkg.backendConfig[name];
+                if (!config || config[hookName] !== false) {
+                    await require(modulePath).default(context);
+                }
             }
         }
     }

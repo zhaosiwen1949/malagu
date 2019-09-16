@@ -24,17 +24,18 @@
     "malagu": "./bin/malagu"
   },
   "scripts": {
-    "prepare": "yarn run clean && yarn build",
-    "clean": "rimraf lib",
-    "build": "tsc -p compile.tsconfig.json",
-    "watch": "yarn build -w",
-    "test": "echo 'skip'",
-    "docs": "echo 'skip'"
+    "prepare": "yarn run clean && yarn run build",
+    "clean": "malaguext clean",
+    "build": "malaguext build",
+    "watch": "malaguext watch",
+    "test": "malaguext test",
+    "docs": "malaguext docs"
   },
   "dependencies": {
     "chalk": "^2.4.2",
     "commander": "^2.20.0",
     "css-loader": "^3.1.0",
+    "decache": "^4.5.1",
     "express-ws": "^4.0.0",
     "file-loader": "^4.1.0",
     "friendly-errors-webpack-plugin": "^1.7.0",
@@ -57,6 +58,7 @@
     "worker-loader": "^2.0.0"
   },
   "devDependencies": {
+    "@malagu/ext-scripts": "^0.0.1",
     "@types/express-ws": "^3.0.0",
     "@types/friendly-errors-webpack-plugin": "^0.1.2",
     "@types/fs-extra": "^8.0.0",

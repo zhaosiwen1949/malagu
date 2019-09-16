@@ -5,6 +5,7 @@ import { FrontendConfigFactory } from './frontend-config-factory';
 import { BackendConfigFactory } from './backend-config-factory';
 import { Context } from './context';
 import * as merge from 'webpack-merge';
+const chalk = require('chalk');
 
 export class ConfigFactory {
     async create(context: Context): Promise<webpack.Configuration[]> {
@@ -15,9 +16,10 @@ export class ConfigFactory {
         for (const configFactory of configFactories) {
             if (configFactory.support(context)) {
                 const config = merge(baseConfig, configFactory.create(context));
-                const webpackHook = context.config.webpack || ((config: webpack.Configuration, context: Context) => config);
+                const webpackHook = context.config.webpack || ((c: webpack.Configuration, ctx: Context) => config);
                 configurations.push(webpackHook(config, context));
-            } 
+                console.log(chalk`malagu {green target} - ${ configurations[configurations.length - 1].name }`);
+            }
         }
         return configurations;
     }

@@ -8,6 +8,7 @@ import { Application } from '@malagu/core/lib/common/application-protocol';
 export async function init(context: any, callback: any) {
     try {
         const c = await container;
+        ContainerProvider.set(c);
         await c.get<Application>(Application).start();
         callback(undefined, '');
     } catch (err) {
@@ -16,12 +17,14 @@ export async function init(context: any, callback: any) {
 }
 
 export async function handler(request: any, response: any, context: any) {
-    request.body = await getRawBody(request).then(body => body.toString());
-    const httpContext = new HttpContext(request, response, context);
-    container.then(c => {
-        ContainerProvider.set(c);
-
+    try {
+        request.body = await getRawBody(request).then(body => body.toString());
+        const httpContext = new HttpContext(request, response, context);
+        const c = await container;
         const dispatcher = c.get<Dispatcher<HttpContext>>(Dispatcher);
         Context.run(() => dispatcher.dispatch(httpContext));
-    });
+    } catch (err) {
+        response.statusCode = 500;
+        response.send(err);
+    }
 }

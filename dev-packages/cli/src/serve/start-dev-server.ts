@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as net from 'net';
-import * as vm from 'vm';
-import { resolve, basename, dirname } from 'path';
+import { resolve } from 'path';
 import webpack = require('webpack');
 const Server = require('webpack-dev-server/lib/Server');
 const setupExitSignals = require('webpack-dev-server/lib/utils/setupExitSignals');
@@ -13,6 +12,8 @@ import * as FriendlyErrorsWebpackPlugin from 'friendly-errors-webpack-plugin';
 import { getDevSuccessInfo } from '../webpack/utils';
 const webpackDevMiddleware = require('webpack-dev-middleware');
 import { ExecuteServeHooks } from './serve-manager';
+import { BACKEND_TARGET } from '../constants';
+const decache = require('decache');
 
 let server: any;
 
@@ -34,25 +35,18 @@ function getEntryPath(configuration: webpack.Configuration) {
     return resolve(path, filename);
 }
 
-function attachBackendServerIfNeed(executeServeHooks: ExecuteServeHooks, server: any, configuration: webpack.Configuration, options: any, log: any) {
-    const compiler = createCompiler(configuration, options, log);
-    server.app.use(webpackDevMiddleware(compiler));
+function attachBackendServer(executeServeHooks: ExecuteServeHooks, configuration: webpack.Configuration, options: any, log: any, c?: webpack.Compiler) {
+    const compiler = c || createCompiler(configuration, options, log);
+    if (!c) {
+        server.app.use(webpackDevMiddleware(compiler, { fs: compiler.outputFileSystem }));
+    }
     const entryContextProvider = () => {
         const entryPath = getEntryPath(configuration);
-        const source = (compiler.outputFileSystem as any).readFileSync(entryPath);
-        const wrapper = `(function (exports, require, module, __filename, __dirname, __request) {
-            ${source}
-        })`;
-        const filename = basename(entryPath);
-        const compiled = vm.runInThisContext(wrapper, {
-            filename,
-            lineOffset: 0,
-            displayErrors: true
-        });
-        const exports: any = {};
-        const module = { exports };
-        compiled(exports, require, module, filename, dirname(filename));
-        return module.exports;
+        for (const key of Object.keys(require.cache)) {
+            decache(key);
+        }
+        const entry = require(entryPath);
+        return entry;
     };
     executeServeHooks(server.listeningApp, server.app, compiler, entryContextProvider);
 
@@ -61,7 +55,7 @@ function attachBackendServerIfNeed(executeServeHooks: ExecuteServeHooks, server:
 function doStartDevServer(configurations: webpack.Configuration[], options: any, executeServeHooks: ExecuteServeHooks) {
     const log = createLogger(options);
 
-    const [configuration, backendConfiguration] = configurations;
+    const [ configuration, backendCnfiguration ] = configurations;
 
     let compiler: webpack.Compiler;
 
@@ -76,7 +70,11 @@ function doStartDevServer(configurations: webpack.Configuration[], options: any,
     try {
         server = new Server(compiler, options, log);
         setupExitSignals(server);
-        attachBackendServerIfNeed(executeServeHooks, server, backendConfiguration, options, log);
+        if (backendCnfiguration) {
+            attachBackendServer(executeServeHooks, backendCnfiguration, options, log);
+        } else if (configuration.name === BACKEND_TARGET) {
+            attachBackendServer(executeServeHooks, configuration, options, log, compiler);
+        }
     } catch (err) {
         if (err.name === 'ValidationError') {
             log.error(colors.error(options.stats.colors, err.message));
@@ -118,9 +116,9 @@ function doStartDevServer(configurations: webpack.Configuration[], options: any,
             // chmod 666 (rw rw rw)
             const READ_WRITE = 438;
 
-            fs.chmod(options.socket, READ_WRITE, (err) => {
-                if (err) {
-                    throw err;
+            fs.chmod(options.socket, READ_WRITE, e => {
+                if (e) {
+                    throw e;
                 }
             });
         });
@@ -143,7 +141,7 @@ function doStartDevServer(configurations: webpack.Configuration[], options: any,
 }
 
 export function startDevServer(configurations: webpack.Configuration[], executeServeHooks: ExecuteServeHooks) {
-    processOptions(configurations, { info: false }, (configurations: any, options: any) => {
-        doStartDevServer(configurations, options, executeServeHooks);
+    processOptions(configurations, { info: false }, (cs: any, options: any) => {
+        doStartDevServer(cs, options, executeServeHooks);
     });
 }

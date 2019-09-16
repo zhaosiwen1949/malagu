@@ -2,7 +2,7 @@ import { loader } from 'webpack';
 import { FRONTEND_TARGET } from '../../constants';
 
 function generateImports(modules: string[], fn: 'import' | 'require'): string {
-	let targetModules: string[] = [];
+    let targetModules: string[] = [];
     targetModules = modules.map((m: string) => {
         if (fn === 'require') {
             return `Promise.resolve(require('${m}'))`;
@@ -17,7 +17,8 @@ function generateFrontendComponents(modules: string[]) {
 require('es6-promise/auto');
 require('reflect-metadata');
 const { Container } = require('inversify');
-const { CoreFrontendModule, FrontendApplication } = require('@malagu/core/lib/browser');
+const { FrontendApplication } = require('@malagu/core/lib/browser');
+const { CoreFrontendModule } = require('@malagu/core/lib/browser/frontend-module');
 const { CONFIG } = require('@malagu/core/lib/common/config-provider');
 const config = process.env;
 
@@ -43,7 +44,8 @@ function generateBackendComponents(modules: string[]) {
     return `
 require('reflect-metadata');
 const { Container } = require('inversify');
-const { CoreBackendModule } = require('@malagu/core/lib/node');
+const { CoreBackendModule } = require('@malagu/core/lib/node/backend-module');
+require('source-map-support').install();
 
 const container = new Container();
 container.load(CoreBackendModule);
@@ -55,27 +57,27 @@ function load(raw) {
 module.exports.container = Promise.resolve()
   .${generateImports(modules, 'require')}
   .then(() => container).catch(reason => {
-	console.error('Failed to start the backend application.');
-	throw new Error(reason);
+	  console.error('Failed to start the backend application.');
     if (reason) {
       console.error(reason);
     }
   });`;
 }
 
-const componentLoader: loader.Loader = function(source) {
-	const { target, modules } = this.query;
+const componentLoader: loader.Loader = function (source, sourceMap) {
+    const { target, modules } = this.query;
     if (target === FRONTEND_TARGET) {
-        return `
+        this.callback(undefined, `
         ${source}
         ${generateFrontendComponents(modules)}
-        `;
+        `, sourceMap);
+
     } else {
-        return `
+        this.callback(undefined, `
         ${source}
         ${generateBackendComponents(modules)}
-        `;
+        `, sourceMap);
     }
-}
+};
 
 export default componentLoader;

@@ -8,10 +8,10 @@ export class BackendConfigFactory {
     create(context: Context): webpack.Configuration {
         const { pkg, port, open, dev } = context;
         const outputPath = path.resolve(pkg.projectPath, context.dest, BACKEND_TARGET);
-        
-        const appConfig = pkg.backendConfig;
-        let entry = appConfig.entry;
-        const type = appConfig.deployConfig ? appConfig.deployConfig.type : undefined;
+
+        const config = pkg.backendConfig;
+        let entry = config.entry;
+        const type = config.deployConfig ? config.deployConfig.type : undefined;
         if (type && typeof entry !== 'string') {
             entry = entry[type];
         }
@@ -31,20 +31,21 @@ export class BackendConfigFactory {
             name: BACKEND_TARGET,
             entry: entry,
             target: 'node',
-            devtool: 'inline-source-map',
+            devtool: 'source-map',
             output: {
                 path: outputPath,
                 filename: 'index.js',
-                libraryTarget: 'umd'
+                libraryTarget: 'umd',
+                devtoolModuleFilenameTemplate: '[absolute-resource-path]'
             },
             devServer: {
                 port,
                 open,
-                stats: 'errors-only'
+                writeToDisk: true
             },
             plugins: [
                 new webpack.DefinePlugin({
-                    'process.env': JSON.stringify(appConfig)
+                    'process.env': JSON.stringify(config)
                 })
             ],
             module: {
@@ -58,13 +59,16 @@ export class BackendConfigFactory {
                                 modules: Array.from(pkg.backendModules.values())
                             }
                         }
-                    }
+                    },
                 ]
             }
         };
     }
 
     support(context: Context): boolean {
-        return context.pkg.backendModules.size > 0;
+        const { pkg: { backendConfig } } = context;
+        const config = backendConfig;
+
+        return context.pkg.backendModules.size > 0 && (!config.targets || config.targets.includes(BACKEND_TARGET));
     }
 }

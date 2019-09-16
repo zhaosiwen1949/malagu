@@ -10,17 +10,20 @@ const nodePathList = (process.env.NODE_PATH || '')
 export class BaseConfigFactory {
     create(context: Context): webpack.Configuration {
         const { dev, pkg } = context;
-        const webpackMode = dev ? 'development' : 'production'
+        const webpackMode = dev ? 'development' : 'production';
         return {
-            entry: context.entry ? path.resolve(pkg.packagePath, context.entry) : path.resolve(pkg.packagePath, 'lib', 'app.js') ,
+            entry: context.entry ? path.resolve(pkg.packagePath, context.entry) : path.resolve(pkg.packagePath, 'lib', 'app.js'),
             mode: webpackMode,
-            devtool: dev ? 'inline-source-map' : undefined,
+            devtool: dev ? 'source-map' : undefined,
             resolveLoader: {
                 modules: [
-                  path.join(__dirname, '..', 'loader'), // The loaders Malagu provides
-                  'node_modules',
-                  ...nodePathList, // Support for NODE_PATH environment variable
+                    path.join(__dirname, '..', 'loader'), // The loaders Malagu provides
+                    'node_modules',
+                    ...nodePathList, // Support for NODE_PATH environment variable
                 ]
+            },
+            devServer: {
+                stats: 'errors-only'
             },
             module: {
                 rules: [
@@ -28,10 +31,12 @@ export class BaseConfigFactory {
                         test: /\.js$/,
                         enforce: 'pre',
                         loader: 'source-map-loader',
-                        exclude: /jsonc-parser|node_modules/
+                        exclude: /jsonc-parser/
                     }
                 ]
-            }
+            },
+            plugins: [
+            ],
         };
     }
 }
