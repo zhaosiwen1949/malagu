@@ -20,6 +20,7 @@
     "src",
     "templates"
   ],
+  "main": "lib",
   "bin": {
     "malagu": "./bin/malagu"
   },
