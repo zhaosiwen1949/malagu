@@ -7,7 +7,7 @@ import { App } from './app';
 @Component({ id: ApplicationShell, rebind: true })
 export class Shell implements ApplicationShell {
 
-    attach(host: HTMLElement): void {
+    attach(host: HTMLElement) {
         ReactDOM.render(<App/>, host);
     }
 }
